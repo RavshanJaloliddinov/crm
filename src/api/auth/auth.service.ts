@@ -36,18 +36,18 @@ export class AuthService {
       data: { ...dto, password: hashedPassword, role: UserRoles.SUPER_ADMIN },
     });
 
-    const accessToken = JwtHelper.signAccessToken({ id: newUser.id, email: newUser.email });
-    const refreshToken = JwtHelper.signRefreshToken({ id: newUser.id, email: newUser.email });
+    // const accessToken = JwtHelper.signAccessToken({ id: newUser.id, email: newUser.email});
+    // const refreshToken = JwtHelper.signRefreshToken({ id: newUser.id, email: newUser.email });
 
-    const refreshTtl = this.getRefreshTokenTTL();
-    await this.redisService.set(`refresh:${newUser.id}`, refreshToken, refreshTtl);
+    // const refreshTtl = this.getRefreshTokenTTL();
+    // await this.redisService.set(`refresh:${newUser.id}`, refreshToken, refreshTtl);
 
     this.logger.log(`User registered: ${newUser.id}`);
 
     return {
       status: HttpStatus.CREATED,
       message: 'User registered successfully',
-      data: { user: newUser, accessToken, refreshToken },
+      data: newUser,
     };
   }
 
@@ -59,8 +59,8 @@ export class AuthService {
     const isMatch = await BcryptEncryption.compare(password, user.password);
     if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-    const accessToken = JwtHelper.signAccessToken({ id: user.id, email: user.email });
-    const refreshToken = JwtHelper.signRefreshToken({ id: user.id, email: user.email });
+    const accessToken = JwtHelper.signAccessToken({ id: user.id, email: user.email, role: user.role});
+    const refreshToken = JwtHelper.signRefreshToken({ id: user.id, email: user.email, role: user.role });
 
     const refreshTtl = this.getRefreshTokenTTL();
     await this.redisService.set(`refresh:${user.id}`, refreshToken, refreshTtl);

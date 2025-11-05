@@ -10,20 +10,29 @@ export class EnrollmentService {
 
   // Talabani kursga yozish
   async enroll(dto: EnrollStudentDto) {
-    // 1️⃣ Kurs va talaba mavjudligini tekshirish
+    
     const course = await this.prisma.course.findUnique({ where: { id: dto.courseId } });
     if (!course) throw new NotFoundException('Course not found');
 
     const student = await this.prisma.student.findUnique({ where: { id: dto.studentId } });
     if (!student) throw new NotFoundException('Student not found');
 
-    // 2️⃣ SeatsAvailable tekshirish
+    
     const courseEntity = new CourseEntity({ ...course });
     if (courseEntity.seatsAvailable <= 0) throw new ConflictException('Kursda bo‘sh o‘rin qolmagan');
 
-    // 3️⃣ Transaction bilan enroll qilish va seatsAvailable update
+    const existingEnrollment = await this.prisma.enrollment.findFirst({
+      where: {
+        studentId: dto.studentId,
+        courseId: dto.courseId,
+      },
+    });
+  
+    if (existingEnrollment) {
+      throw new ConflictException('Student already enrolled in this course');
+    }
+    
     const enrollment = await this.prisma.$transaction(async (prisma) => {
-      // Enrollment yaratish
       const newEnrollment = await prisma.enrollment.create({
         data: {
           studentId: dto.studentId,
@@ -50,7 +59,7 @@ export class EnrollmentService {
     };
   }
 
-  // Enrollmentni bekor qilish
+
   async unenroll(dto: UnenrollDto) {
     const enrollment = await this.prisma.enrollment.findUnique({ where: { id: dto.enrollmentId } });
     if (!enrollment) throw new NotFoundException('Enrollment not found');
@@ -101,13 +110,19 @@ export class EnrollmentService {
     };
   }
 
-  // Hozirgi davom etayotgan enrollments
-  async getActiveEnrollments() {
-    const enrollments = await this.prisma.enrollment.findMany({ where: { completed: false } });
-    return {
-      statusCode: 200,
-      message: 'Active enrollments fetched successfully',
-      data: enrollments,
-    };
-  }
+
+async getEnrollments(isCompleted?: 'true' | 'false') {
+  const completed = isCompleted === 'true' ? true : isCompleted === 'false' ? false : undefined;
+
+  const enrollments = await this.prisma.enrollment.findMany({
+    where: completed !== undefined ? { completed } : {},
+  });
+
+  return {
+    statusCode: 200,
+    message: 'Enrollments fetched successfully',
+    data: enrollments,
+  };
+}
+
 }

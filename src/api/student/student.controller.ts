@@ -1,11 +1,11 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { StudentService } from './student.service';
 import { CreateStudentDto } from './dto';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public';
 
 @ApiTags('Students')
-@Public()
+@ApiBearerAuth('access-token')
 @Controller('students')
 export class StudentController {
   constructor(private readonly studentService: StudentService) { }

@@ -1,11 +1,11 @@
 import { Controller, Post, Body, Get, Param, Patch, Delete } from '@nestjs/common';
 import { InstructorService } from './instructor.service';
 import { CreateInstructorDto, UpdateInstructorDto } from './dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public';
 
 @ApiTags('Instructors')
-@Public()
+@ApiBearerAuth('access-token')
 @Controller('instructors')
 export class InstructorController {
   constructor(private readonly instructorService: InstructorService) { }

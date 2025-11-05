@@ -10,7 +10,6 @@ export class StudentService {
   constructor(private readonly prisma: PrismaService) { }
 
   async create(dto: CreateStudentDto) {
-    // Email uniqueness check
     const existing = await this.prisma.student.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('Email already in use');
 

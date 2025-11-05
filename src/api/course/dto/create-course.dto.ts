@@ -26,7 +26,7 @@ export class CreateCourseDto {
     capacity: number;
 
     @ApiPropertyOptional({ description: 'Instructor ID, agar kursga o‘qituvchi tayinlanadigan bo‘lsa', example: 2 })
-    @IsOptional()
+    @IsNotEmpty()
     @IsInt()
-    instructorId?: number;
+    instructorId: number;
 }

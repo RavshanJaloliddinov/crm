@@ -2,15 +2,25 @@ import { Injectable, NotFoundException, ConflictException, Logger } from '@nestj
 import { PrismaService } from '../../prisma/prisma.service';
 import { CourseEntity } from './entities/course.entity';
 import { CreateCourseDto, UpdateCourseDto } from './dto';
+import { InstructorService } from '../instructor/instructor.service';
 
 @Injectable()
 export class CourseService {
   private readonly logger = new Logger(CourseService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly instructorService: InstructorService
+  ) { }
 
   async create(dto: CreateCourseDto) {
+
     const course = new CourseEntity({ ...dto, seatsAvailable: dto.capacity });
+
+    if (dto.capacity <= 0) throw new ConflictException('Capacity must be a positive number');
+    
+    const instructor = await this.instructorService.findOne(dto.instructorId)
+    if(!instructor) throw new NotFoundException('Instructor not found')
 
     const created = await this.prisma.course.create({
       data: { ...course },
@@ -24,20 +34,61 @@ export class CourseService {
     };
   }
 
-  async findAll(filter?: 'upcoming' | 'ongoing' | 'completed') {
-    const courses = await this.prisma.course.findMany();
-    const mapped = courses.map(c => new CourseEntity(c));
+ async findAll(filter?: 'upcoming' | 'ongoing' | 'completed') {
+  const now = new Date();
 
-    const data = filter
-      ? mapped.filter(course => course.getStatus() === filter)
-      : mapped;
-
-    return {
-      statusCode: 200,
-      message: 'Courses retrieved successfully',
-      data,
-    };
+  let where = {};
+  if (filter === 'upcoming') {
+    where = { startDate: { gt: now } };
+  } else if (filter === 'ongoing') {
+    where = { startDate: { lte: now }, endDate: { gte: now } };
+  } else if (filter === 'completed') {
+    where = { endDate: { lt: now } };
   }
+
+  const courses = await this.prisma.course.findMany({
+    where,
+    orderBy: { startDate: 'asc' },
+  });
+
+  return {
+    statusCode: 200,
+    message: 'Courses retrieved successfully',
+    data: courses.map(c => new CourseEntity(c)),
+  };
+}
+async findAllWithUsers(filter?: 'upcoming' | 'ongoing' | 'completed') {
+  const now = new Date();
+
+  let where = {};
+  if (filter === 'upcoming') {
+    where = { startDate: { gt: now } };
+  } else if (filter === 'ongoing') {
+    where = { startDate: { lte: now }, endDate: { gte: now } };
+  } else if (filter === 'completed') {
+    where = { endDate: { lt: now } };
+  }
+
+  const courses = await this.prisma.course.findMany({
+    where,
+    orderBy: { startDate: 'asc' },
+    include: {
+      enrollments: {
+        include: {
+          student: true, 
+        },
+      },
+      instructor: true, 
+    },
+  });
+
+  return {
+    statusCode: 200,
+    message: 'Courses retrieved successfully',
+    data: courses.map(c => new CourseEntity(c)), // agar CourseEntity enrollmentsni ham qamrab olishi kerak bo'lsa, constructorga qo'shish kerak
+  };
+}
+
 
   async findOne(id: number) {
     const course = await this.prisma.course.findUnique({ where: { id } });
@@ -51,38 +102,54 @@ export class CourseService {
   }
 
   async update(id: number, dto: UpdateCourseDto) {
-    const existing = await this.prisma.course.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Course not found');
 
-    const courseEntity = new CourseEntity({
-      ...existing,
+    
+      // Transaction bilan ishlash
+    const updated = await this.prisma.$transaction(async (tx) => {
+      // 1️⃣ Avval mavjud kursni tekshirish
+      const course = await tx.course.findUnique({ where: { id } });
+      if (!course) throw new NotFoundException('Course not found');
+
+      // 2️⃣ Instructor tekshiruvi (agar instructorId berilgan bo‘lsa)
+      if (dto.instructorId !== undefined) {
+        const instructor = await this.instructorService.findOne(dto.instructorId);
+        if (!instructor) throw new NotFoundException('Instructor not found');
+      }
+
+      if(dto.capacity !== undefined){
+        if (dto.capacity <= 0) throw new ConflictException('Capacity must be a positive number');
+        if (dto.capacity < course.capacity-course.seatsAvailable) throw new ConflictException(`New capacity (${dto.capacity}) cannot be less than current seats available (${course.seatsAvailable})`)
+      }
+
+      // 3️⃣ Capacity o‘zgargan bo‘lsa, seatsAvailable qayta hisoblash
+      const currentEnrolled = course.capacity - course.seatsAvailable;
+      const newSeatsAvailable = dto.capacity !== undefined
+        ? Math.max(0, dto.capacity - currentEnrolled)
+        : course.seatsAvailable;
+
+      // 4️⃣ Update qilish
+      const updatedCourse = await tx.course.update({
+        where: { id },
+        data: {
+          title: dto.title ?? course.title,
+          description: dto.description ?? course.description,
+          startDate: dto.startDate ? new Date(dto.startDate) : course.startDate,
+          endDate: dto.endDate ? new Date(dto.endDate) : course.endDate,
+          capacity: dto.capacity ?? course.capacity,
+          seatsAvailable: newSeatsAvailable,
+          instructorId: dto.instructorId ?? course.instructorId,
+        },
+      });
+
+      // 5️⃣ Logger orqali voqeani yozib qo‘yish
+      this.logger.log(
+        `Course updated: ${updatedCourse.id}, fields: ${Object.keys(dto).join(', ')}`
+      );
+
+      return updatedCourse;
     });
 
-    if (dto.capacity !== undefined && dto.capacity !== existing.capacity) {
-      const currentEnrolled = existing.capacity - existing.seatsAvailable;
-      courseEntity.updateCapacity(dto.capacity, currentEnrolled);
-    }
-
-    if (dto.title !== undefined) courseEntity.title = dto.title;
-    if (dto.description !== undefined) courseEntity.description = dto.description;
-    if (dto.startDate !== undefined) courseEntity.startDate = new Date(dto.startDate);
-    if (dto.endDate !== undefined) courseEntity.endDate = new Date(dto.endDate);
-    if (dto.instructorId !== undefined) courseEntity.instructorId = dto.instructorId;
-
-    const updated = await this.prisma.course.update({
-      where: { id },
-      data: {
-        title: courseEntity.title,
-        description: courseEntity.description,
-        startDate: courseEntity.startDate,
-        endDate: courseEntity.endDate,
-        capacity: courseEntity.capacity,
-        seatsAvailable: courseEntity.seatsAvailable,
-        instructorId: courseEntity.instructorId,
-      },
-    });
-
-    // 6️⃣ Return format
+    // 6️⃣ Return response
     return {
       statusCode: 200,
       message: 'Course updated successfully',
@@ -91,19 +158,23 @@ export class CourseService {
   }
 
 
-  async remove(id: number) {
-    const enrollments = await this.prisma.enrollment.count({ where: { courseId: id } });
-    if (enrollments > 0) {
-      throw new ConflictException('Cannot delete course with existing enrollments');
-    }
 
-    const deleted = await this.prisma.course.delete({ where: { id } });
-    this.logger.log(`Course deleted: ${deleted.id}`);
+  async remove(id: number) {
+    // Tranzaksiyada kurs va barcha enrollmentsni o‘chirib tashlaymiz
+    const deleted = await this.prisma.$transaction(async (tx) => {
+
+      await tx.enrollment.deleteMany({ where: { courseId: id } });
+
+      return tx.course.delete({ where: { id } });
+    });
+
+    this.logger.log(`Course and its enrollments deleted: ${deleted.id}`);
 
     return {
       statusCode: 200,
-      message: 'Course deleted successfully',
+      message: 'Course and all related enrollments deleted successfully',
       data: deleted,
     };
   }
+
 }

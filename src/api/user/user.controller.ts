@@ -1,11 +1,16 @@
-import { Controller, Post, Body, Get, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Delete, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public';
+import { RolesDecorator } from 'src/common/decorators/RolesDecorator';
+import { RolesGuard } from 'src/common/guards/RoleGuard';
+import { UserRoles } from 'src/common/database/Enum';
 
 @ApiTags('Users')
-@Public()
+@ApiBearerAuth('access-token')
+@UseGuards(RolesGuard)
+@RolesDecorator(UserRoles.SUPER_ADMIN)
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) { }

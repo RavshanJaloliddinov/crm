@@ -1,9 +1,11 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { EnrollmentService } from './enrollment.service';
 import { EnrollStudentDto, UnenrollDto, CompleteEnrollmentDto } from './dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { Public } from 'src/common/decorators/public';
 
 @ApiTags('Enrollments')
+@ApiBearerAuth('access-token')
 @Controller('enrollments')
 export class EnrollmentController {
   constructor(private readonly enrollmentService: EnrollmentService) { }
@@ -74,6 +76,11 @@ export class EnrollmentController {
   }
 
   @Get('active')
+  @ApiQuery({
+    name: 'isCompleted',
+    required: false,
+    description: 'Filter enrollment by completed',
+  })
   @ApiOperation({ summary: 'Get all active (ongoing) enrollments' })
   @ApiResponse({
     status: 200,
@@ -95,7 +102,7 @@ export class EnrollmentController {
       },
     },
   })
-  getActiveEnrollments() {
-    return this.enrollmentService.getActiveEnrollments();
+  getEnrollments(@Query('isCompleted') isCompleted?: 'true' | 'false') {
+    return this.enrollmentService.getEnrollments(isCompleted);
   }
 }

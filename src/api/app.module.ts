@@ -10,9 +10,19 @@ import { InstructorModule } from './instructor/instructor.module';
 import { EnrollmentModule } from './enrollment/enrollment.module';
 import { RedisModule } from 'src/infrastructure/redis/redis.module';
 import { AuthModule } from './auth/auth.module';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { IpThrottleGuard } from 'src/common/guards/ip-throttle.guard';
 
 @Module({
   imports: [
+    // Global Throttler konfiguratsiyasi
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000, // 1 daqiqa = 60000 ms
+        limit: 5,    // shu TTL ichida 5 ta so'rov
+      },
+    ]),
     PrismaModule,
     UserModule,
     StudentModule,
@@ -26,8 +36,12 @@ import { AuthModule } from './auth/auth.module';
     JwtStrategy,
     {
       provide: APP_GUARD,
-      useClass: JwtAuthGuard,
+      useClass: JwtAuthGuard, // default auth guard
     },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: IpThrottleGuard, // global IP bo‘yicha limiter
+    // },
   ],
 })
-export class AppModule { }
+export class AppModule {}
