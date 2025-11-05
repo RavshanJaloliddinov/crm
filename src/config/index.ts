@@ -7,8 +7,8 @@ export type ConfigType = {
     PORT: number;
     DB_URL: string;
     REDIS_URL: string;
-    EMAIL: string;
-    EMAIL_PASSWORD: string;
+    // EMAIL: string;
+    // EMAIL_PASSWORD: string;
     ACCESS_TOKEN_SECRET_KEY: string;
     ACCESS_TOKEN_EXPIRE_TIME: string;
     REFRESH_TOKEN_SECRET_KEY: string;
@@ -20,8 +20,8 @@ const requiredVariables = [
     'DEV_DB_URL',
     'PROD_DB_URL',
     'REDIS_URL',
-    'EMAIL',
-    'EMAIL_PASSWORD',
+    // 'EMAIL',
+    // 'EMAIL_PASSWORD',
     'ACCESS_TOKEN_SECRET_KEY',
     'ACCESS_TOKEN_EXPIRE_TIME',
     'REFRESH_TOKEN_SECRET_KEY',
@@ -44,8 +44,8 @@ export const config: ConfigType = {
         ? (process.env.DEV_DB_URL!)
         : (process.env.PROD_DB_URL!),
     REDIS_URL: process.env.REDIS_URL!,
-    EMAIL: process.env.EMAIL!,
-    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD!,
+    // EMAIL: process.env.EMAIL!,
+    // EMAIL_PASSWORD: process.env.EMAIL_PASSWORD!,
     ACCESS_TOKEN_SECRET_KEY: process.env.ACCESS_TOKEN_SECRET_KEY!,
     ACCESS_TOKEN_EXPIRE_TIME: process.env.ACCESS_TOKEN_EXPIRE_TIME!,
     REFRESH_TOKEN_SECRET_KEY: process.env.REFRESH_TOKEN_SECRET_KEY!,
