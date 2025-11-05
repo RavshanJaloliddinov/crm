@@ -1,0 +1,70 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DEV_DB_URL")
+}
+
+enum UserRoles {
+    super_admin
+    admin
+}
+
+model User {
+    id       Int       @id @default(autoincrement())
+    name     String
+    email    String    @unique
+    password String
+    role     UserRoles @default(admin)
+}
+
+model Course {
+    id             Int          @id @default(autoincrement())
+    title          String
+    description    String
+    startDate      DateTime
+    endDate        DateTime
+    capacity       Int
+    seatsAvailable Int
+    instructorId   Int?
+    instructor     Instructor?  @relation(fields: [instructorId], references: [id])
+    enrollments    Enrollment[] 
+
+    @@map("courses")
+}
+
+model Instructor {
+    id      Int      @id @default(autoincrement())  
+    name    String
+    email   String   @unique
+    bio     String?
+    courses Course[]
+
+    @@map("instructors")
+}
+
+model Student {
+    id          Int          @id @default(autoincrement())
+    name        String
+    email       String       @unique
+    enrolledAt  DateTime     @default(now())
+    enrollments Enrollment[]
+
+    @@map("students")
+}
+
+model Enrollment {
+    id             Int       @id @default(autoincrement())
+    studentId      Int
+    courseId       Int
+    enrolledDate   DateTime  @default(now())
+    completed      Boolean   @default(false)
+    completionDate DateTime?
+
+    student Student @relation(fields: [studentId], references: [id])
+    course  Course  @relation(fields: [courseId], references: [id])
+
+    @@map("enrollments")
+}
