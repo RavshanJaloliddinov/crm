@@ -19,10 +19,10 @@ import { IpThrottleGuard } from 'src/common/guards/ip-throttle.guard';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  async register(@Body() createUserDto: CreateUserDto) {
-    return await this.authService.register(createUserDto);
-  }
+  // @Post('register')
+  // async register(@Body() createUserDto: CreateUserDto) {
+  //   return await this.authService.register(createUserDto);
+  // }
 
   @UseGuards(IpThrottleGuard) // ✅ IP bo‘yicha limiter shu endpointga
   @Post('login')
