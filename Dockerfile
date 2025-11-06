@@ -1,21 +1,26 @@
 # Node.js bazasi
 FROM node:18-alpine
 
-# Redis o'rnatish
-RUN apk add --no-cache redis
-
 # Ishchi katalog
 WORKDIR /app
 
+# Bash va boshqa kerakli paketlar
+RUN apk add --no-cache bash curl
+
 # package.json fayllarni nusxalash va modullarni o‘rnatish
 COPY package*.json ./
+
+# Node modullarini o‘rnatish
 RUN npm install --force
 
-# Endi butun loyihani nusxalash
+# Loyihani nusxalash
 COPY . .
 
-# Prisma client generatsiyasi (schema.prisma hozir mavjud)
+# Prisma Client generatsiyasi
 RUN npx prisma generate
+
+# Production DB bo‘lsa migratsiyalarni deploy qilish
+RUN npx prisma migrate deploy || echo "No migrations to apply"
 
 # Loyihani build qilish
 RUN npm run build
@@ -23,5 +28,5 @@ RUN npm run build
 # Port ochish
 EXPOSE 3000
 
-# Redis va NestJS`ni ishga tushirish
-CMD redis-server --daemonize yes && npm run start:dev
+# NestJS ilovasini ishga tushirish
+CMD ["npm", "run", "start:dev"]
