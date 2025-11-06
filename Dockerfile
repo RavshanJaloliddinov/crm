@@ -9,12 +9,17 @@ WORKDIR /app
 
 # Fayllarni nusxalash
 COPY package*.json ./
+
+# Dependencies o‘rnatish
 RUN npm install --force
+
+# Prisma client generatsiyasi
+RUN npx prisma generate
 
 # Loyihani nusxalash
 COPY . .
 
-# Loyihani qurish
+# Loyihani build qilish
 RUN npm run build
 
 # Port ochish
