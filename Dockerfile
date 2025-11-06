@@ -7,17 +7,15 @@ RUN apk add --no-cache redis
 # Ishchi katalog
 WORKDIR /app
 
-# Fayllarni nusxalash
+# package.json fayllarni nusxalash va modullarni o‘rnatish
 COPY package*.json ./
-
-# Dependencies o‘rnatish
 RUN npm install --force
 
-# Prisma client generatsiyasi
-RUN npx prisma generate
-
-# Loyihani nusxalash
+# Endi butun loyihani nusxalash
 COPY . .
+
+# Prisma client generatsiyasi (schema.prisma hozir mavjud)
+RUN npx prisma generate
 
 # Loyihani build qilish
 RUN npm run build
