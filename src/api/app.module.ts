@@ -19,7 +19,7 @@ import { IpThrottleGuard } from 'src/common/guards/ip-throttle.guard';
     ThrottlerModule.forRoot([
       {
         name: 'default',
-        ttl: 60_000, // 1 daqiqa = 60000 ms
+        ttl: 3_600_000, // 1 daqiqa = 60000 ms
         limit: 5,    // shu TTL ichida 5 ta so'rov
       },
     ]),
@@ -32,7 +32,7 @@ import { IpThrottleGuard } from 'src/common/guards/ip-throttle.guard';
     RedisModule,
     AuthModule,
   ],
-  providers: [
+  providers: [ 
     JwtStrategy,
     {
       provide: APP_GUARD,
